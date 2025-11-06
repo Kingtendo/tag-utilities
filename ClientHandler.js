@@ -22,6 +22,7 @@ export class ClientHandler extends EventEmitter {
       auth: "microsoft",
       hideErrors: true
     })
+    console.log(`[ClientHandler] Created Hypixel session for ${userClient.username} (handler ${this.id})`)
 
     //add trimmed UUIDs
     this.userClient.trimmedUUID = this.userClient.uuid.replaceAll("-", "")
@@ -103,9 +104,27 @@ export class ClientHandler extends EventEmitter {
       userClient.end(`§cProxy lost connection to Hypixel: §r${reason}`)
     })
     userClient.on("error", () => {})
-    proxyClient.on("error", () => {})
+    proxyClient.on("error", (err) => {
+      if (!err) {
+        console.error("[ProxyClient Error] Unknown error")
+        return
+      }
+      console.error("[ProxyClient Error]", err)
+      if (err.stack) {
+        console.error("[ProxyClient Error Stack]", err.stack)
+      }
+    })
     //if the proxy client gets kicked while logging in, kick the user client
     proxyClient.once("disconnect", data => {
+      if (data) {
+        if (data.reason) {
+          console.log("[ProxyClient Disconnect]", data.reason)
+        } else {
+          console.log("[ProxyClient Disconnect Data]", data)
+        }
+      } else {
+        console.log("[ProxyClient Disconnect] Received disconnect with no data")
+      }
       userClient.write("kick_disconnect", data)
     })
   }
