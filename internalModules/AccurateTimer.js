@@ -399,5 +399,5 @@ function formatTabListCountdown(timeRemaining) {
   } else {
     colorCode = "a"
   }
-  return `§${colorCode} [${seconds}s]`
+  return `§${colorCode}[${seconds}s]§r`
 }

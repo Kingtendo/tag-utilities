@@ -321,11 +321,15 @@ export class TabListHandler {
   addTeamOverride(uuid, username, data) {
     //not entirely sure why but this happens sometimes - just don't set in that case
     if (username === undefined) return
-    let extraText
+    let countdownPrefix = null
+    let extraSuffixText = ""
     if (data.nicked) {
-      extraText = '§c [NICKED]'
+      extraSuffixText = '§c [NICKED]'
     } else {
-      extraText = this.getCurrentCountdownPrefix(data)
+      countdownPrefix = this.getCountdownPrefixSegment()
+      if (!countdownPrefix) {
+        extraSuffixText = this.getWinsSuffix(data)
+      }
     }
     let orderingNums
     let serverTeamValue = null
@@ -342,22 +346,17 @@ export class TabListHandler {
     }
     let newTeamKey = (orderingNums || "aaa") + username.substring(0, 3) + randomString(10)
 
-    let newSuffix
-    if (serverTeamValue?.suffix) {
-      newSuffix = serverTeamValue.suffix + extraText
-    } else {
-      newSuffix = extraText
-    }
+    let newSuffixBase = serverTeamValue?.suffix || ""
+    let newSuffix = newSuffixBase + extraSuffixText
     let extraPrefixText = ""
     if (isBlacklisted(uuid.replaceAll("-", ""))) {
       extraPrefixText = "§e"
     }
-    let newPrefix
-    if (serverTeamValue?.prefix) {
-      newPrefix = serverTeamValue.prefix + extraPrefixText
-    } else {
-      newPrefix = extraPrefixText
+    let newPrefixBase = serverTeamValue?.prefix || ""
+    if (countdownPrefix) {
+      newPrefixBase = countdownPrefix + newPrefixBase
     }
+    let newPrefix = newPrefixBase + extraPrefixText
     this.userClient.write("scoreboard_team", {
       team: newTeamKey,
       mode: 0,
@@ -400,14 +399,17 @@ export class TabListHandler {
     }
   }
 
-  getCurrentCountdownPrefix(data) {
+  getCountdownPrefixSegment() {
     let countdown = this.currentCountdownText
     if (!countdown && this.accurateTimer && typeof this.accurateTimer.getTabListCountdown === "function") {
       countdown = this.accurateTimer.getTabListCountdown()
       this.currentCountdownText = countdown
     }
-    if (countdown) return countdown
+    if (!countdown) return null
+    return `${countdown} `
+  }
 
+  getWinsSuffix(data) {
     let wins = data.wins
     let winsColor
     let colors = new Map([
