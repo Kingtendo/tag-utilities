@@ -20,9 +20,25 @@ export class TabListHandler {
     this.entityVisibilityByEID = new Map()
     this.entityVisibilityByUUID = new Map()
 
+    this.accurateTimer = null
+    this.currentCountdownText = null
+    this._boundCountdownListener = null
+
     if (enabled) {
       this.bindModifiers()
       this.bindEventListeners()
+    }
+  }
+
+  attachAccurateTimer(accurateTimer) {
+    if (this.accurateTimer && this._boundCountdownListener) {
+      this.accurateTimer.removeListener("tabListCountdownUpdate", this._boundCountdownListener)
+    }
+    this.accurateTimer = accurateTimer
+    this.currentCountdownText = accurateTimer?.getTabListCountdown?.() || null
+    this._boundCountdownListener = this.handleCountdownUpdate.bind(this)
+    if (this.accurateTimer) {
+      this.accurateTimer.on("tabListCountdownUpdate", this._boundCountdownListener)
     }
   }
 
@@ -309,28 +325,7 @@ export class TabListHandler {
     if (data.nicked) {
       extraText = '§c [NICKED]'
     } else {
-      let wins = data.wins
-      let winsColor
-      let colors = new Map([
-        [10000, "1"],
-        [5000, "0"],
-        [2500, "c"],
-        [1500, "6"],
-        [1000, "5"],
-        [500, "9"],
-        [250, "a"],
-        [100, "2"],
-        [50, "f"],
-        [15, "7"],
-        [0, "8"]
-      ])
-      for (let [key, value] of colors) {
-        if (wins >= key) {
-          winsColor = value
-          break
-        }
-      }
-      extraText = `§${winsColor} [${wins.toString()}]`
+      extraText = this.getCurrentCountdownPrefix(data)
     }
     let orderingNums
     let serverTeamValue = null
@@ -394,6 +389,47 @@ export class TabListHandler {
     let existingOverride = this.teamOverrides.get(uuid)
     this.removeTeamOverride(uuid)
     this.addTeamOverride(uuid, existingOverride.username, existingOverride.data)
+  }
+
+  handleCountdownUpdate(countdownText) {
+    if (this.currentCountdownText === countdownText) return
+    this.currentCountdownText = countdownText
+    if (this.stateHandler.state !== "game") return
+    for (let uuid of Array.from(this.teamOverrides.keys())) {
+      this.replaceTeamOverride(uuid)
+    }
+  }
+
+  getCurrentCountdownPrefix(data) {
+    let countdown = this.currentCountdownText
+    if (!countdown && this.accurateTimer && typeof this.accurateTimer.getTabListCountdown === "function") {
+      countdown = this.accurateTimer.getTabListCountdown()
+      this.currentCountdownText = countdown
+    }
+    if (countdown) return countdown
+
+    let wins = data.wins
+    let winsColor
+    let colors = new Map([
+      [10000, "1"],
+      [5000, "0"],
+      [2500, "c"],
+      [1500, "6"],
+      [1000, "5"],
+      [500, "9"],
+      [250, "a"],
+      [100, "2"],
+      [50, "f"],
+      [15, "7"],
+      [0, "8"]
+    ])
+    for (let [key, value] of colors) {
+      if (wins >= key) {
+        winsColor = value
+        break
+      }
+    }
+    return `§${winsColor} [${wins.toString()}]`
   }
 
   tryForceUpdate(uuid) {

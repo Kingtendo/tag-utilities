@@ -37,6 +37,7 @@ export class ClientHandler extends EventEmitter {
     this.consoleLogger = new ConsoleLogger(this)
     this.tabListHandler = new TabListHandler(this)
     this.accurateTimer = new AccurateTimer(this)
+    this.tabListHandler.attachAccurateTimer(this.accurateTimer)
     this.visibleBarriers = new VisibleBarriers(this)
 
     this.bindEventListeners()

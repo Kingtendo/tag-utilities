@@ -29,6 +29,8 @@ export class AccurateTimer extends EventEmitter {
 
     this.witherSpawned = false
 
+    this.tabListCountdown = null
+
     this.bindEventListeners()
     this.bindModifiers()
   }
@@ -123,6 +125,7 @@ export class AccurateTimer extends EventEmitter {
       if (this.witherSpawned) {
         this.despawnWither()
       }
+      this.setTabListCountdown(null)
     })
     this.stateHandler.on("game", () => {
       this.playersAlive = 32
@@ -132,6 +135,7 @@ export class AccurateTimer extends EventEmitter {
       this.explosionPingCompleted = 6
       this.afterRoundTime = 0
       this.timerScoreboardTeam = null
+      this.setTabListCountdown(null)
 
       this.explosionTimerInterval = setInterval(() => {
         if (this.explosionTime === null) return
@@ -185,6 +189,7 @@ export class AccurateTimer extends EventEmitter {
     this.clientHandler.sendClientActionBar({
       text: formattedMessage
     })
+    this.updateTabListCountdown(timeRemaining, afterRoundTimeRemaining)
     if (this.timerScoreboardTeam) {
       if (timeRemaining < 0) {
         this.userClient.write("scoreboard_team", {
@@ -339,6 +344,28 @@ export class AccurateTimer extends EventEmitter {
       entityIds: [-69420, -69421, -69422]
     })
   }
+
+  updateTabListCountdown(timeRemaining, afterRoundTimeRemaining) {
+    let countdownText = null
+    if (this.explosionTime === null) {
+      countdownText = null
+    } else if (timeRemaining >= 0) {
+      countdownText = formatTabListCountdown(timeRemaining)
+    } else if (this.setAfterRoundTime) {
+      countdownText = formatTabListCountdown(afterRoundTimeRemaining)
+    }
+    this.setTabListCountdown(countdownText)
+  }
+
+  setTabListCountdown(countdownText) {
+    if (this.tabListCountdown === countdownText) return
+    this.tabListCountdown = countdownText
+    this.emit("tabListCountdownUpdate", countdownText)
+  }
+
+  getTabListCountdown() {
+    return this.tabListCountdown
+  }
 }
 
 function formatExplosionTime(timeRemaining) {
@@ -358,4 +385,19 @@ function formatExplosionTime(timeRemaining) {
 
 function toRadians(degrees) {
   return degrees * (Math.PI / 180)
+}
+
+function formatTabListCountdown(timeRemaining) {
+  if (timeRemaining < 0 || !isFinite(timeRemaining)) timeRemaining = 0
+  let seconds = Math.ceil(timeRemaining / 1000)
+  if (seconds < 0) seconds = 0
+  let colorCode
+  if (seconds < 5) {
+    colorCode = "c"
+  } else if (seconds < 15) {
+    colorCode = "6"
+  } else {
+    colorCode = "a"
+  }
+  return `§${colorCode} [${seconds}s]`
 }
