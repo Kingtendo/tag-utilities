@@ -22,7 +22,8 @@ export class ClientHandler extends EventEmitter {
       auth: "microsoft",
       hideErrors: true
     })
-    console.log(`[ClientHandler] Created Hypixel session for ${userClient.username} (handler ${this.id})`)
+    this.sessionLabel = `[ClientHandler ${this.id} - ${this.userClient.username}]`
+    console.log(`${this.sessionLabel} Created Hypixel session`)
 
     //add trimmed UUIDs
     this.userClient.trimmedUUID = this.userClient.uuid.replaceAll("-", "")
@@ -101,29 +102,51 @@ export class ClientHandler extends EventEmitter {
       this.destroy()
     })
     proxyClient.on("end", (reason) => {
-      userClient.end(`§cProxy lost connection to Hypixel: §r${reason}`)
+      const formattedReason = reason ?? "<no reason provided>"
+      console.log(`${this.sessionLabel} Proxy client connection ended:`, formattedReason)
+      userClient.end(`§cProxy lost connection to Hypixel: §r${formattedReason}`)
     })
-    userClient.on("error", () => {})
-    proxyClient.on("error", (err) => {
+    userClient.on("error", (err) => {
       if (!err) {
-        console.error("[ProxyClient Error] Unknown error")
+        console.error(`${this.sessionLabel} User client error: <unknown>`)
         return
       }
-      console.error("[ProxyClient Error]", err)
+      console.error(`${this.sessionLabel} User client error:`, err)
       if (err.stack) {
-        console.error("[ProxyClient Error Stack]", err.stack)
+        console.error(`${this.sessionLabel} User client error stack:\n${err.stack}`)
+      }
+    })
+    proxyClient.on("error", (err) => {
+      if (!err) {
+        console.error(`${this.sessionLabel} Proxy client error: <unknown>`)
+        return
+      }
+      console.error(`${this.sessionLabel} Proxy client error:`, err)
+      if (err.stack) {
+        console.error(`${this.sessionLabel} Proxy client error stack:\n${err.stack}`)
       }
     })
     //if the proxy client gets kicked while logging in, kick the user client
     proxyClient.once("disconnect", data => {
       if (data) {
         if (data.reason) {
-          console.log("[ProxyClient Disconnect]", data.reason)
+          const { reason } = data
+          if (typeof reason === "string") {
+            console.log(`${this.sessionLabel} Hypixel disconnect reason (raw string):`, reason)
+            try {
+              const parsed = JSON.parse(reason)
+              console.log(`${this.sessionLabel} Hypixel disconnect reason (parsed JSON):`, JSON.stringify(parsed, null, 2))
+            } catch (parseError) {
+              console.log(`${this.sessionLabel} Unable to parse disconnect reason JSON:`, parseError.message)
+            }
+          } else {
+            console.log(`${this.sessionLabel} Hypixel disconnect reason (non-string):`, reason)
+          }
         } else {
-          console.log("[ProxyClient Disconnect Data]", data)
+          console.log(`${this.sessionLabel} Hypixel disconnect payload without reason:`, data)
         }
       } else {
-        console.log("[ProxyClient Disconnect] Received disconnect with no data")
+        console.log(`${this.sessionLabel} Hypixel disconnect with no payload`)
       }
       userClient.write("kick_disconnect", data)
     })
