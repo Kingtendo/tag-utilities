@@ -1,7 +1,6 @@
-package-lock.json
-node_modules
-config.yml
-data.json
-out.js
-out-*
-tnttagutilities-*
+﻿.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.log
